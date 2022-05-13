@@ -160,7 +160,7 @@ const dropHandler = (e) => {
   e.preventDefault();
   const reader = new FileReader();
   
-  document.getElementById("info").style.width = "768px";
+  document.getElementById("info").style.visibility = "visible";
   reader.readAsArrayBuffer(e.dataTransfer.files[0]);
 
   reader.onload = () => {
