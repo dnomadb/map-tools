@@ -1,22 +1,22 @@
 const maplibregl = require("maplibre-gl");
-const VectorTileLayer = require("@mapbox/vector-tile/lib/vectortilelayer")
+const VectorTileLayer = require("@mapbox/vector-tile/lib/vectortilelayer");
 const Protobuf = require("pbf");
 const randomColor = require("randomcolor");
 const { tileToBBOX } = require("@mapbox/tilebelt");
 
 function VectorTile(pbf, end) {
-  this.layers = pbf.readFields(readTile, {last:0}, end);
+  this.layers = pbf.readFields(readTile, { last: 0 }, end);
   delete this.layers.last;
 }
 
 const readTile = (tag, layers, pbf) => {
   if (tag === 3) {
-      const layer = new VectorTileLayer(pbf, pbf.readVarint() + pbf.pos);
-      layer.bytelength = pbf.pos - layers.last;
-      layers.last = pbf.pos;
-      if (layer.length) layers[layer.name] = layer;
+    const layer = new VectorTileLayer(pbf, pbf.readVarint() + pbf.pos);
+    layer.bytelength = pbf.pos - layers.last;
+    layers.last = pbf.pos;
+    if (layer.length) layers[layer.name] = layer;
   }
-}
+};
 
 const map = new maplibregl.Map({
   container: "map",
@@ -85,11 +85,11 @@ const makeStyle = (features) => {
             "circle-color": color,
             "circle-radius": 1,
             "circle-opacity": [
-              'case',
-              ['boolean', ['feature-state', 'hover'], false],
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
               0.75,
-              0.5
-              ]
+              0.5,
+            ],
           },
           type: "circle",
         },
@@ -113,11 +113,11 @@ const makeStyle = (features) => {
           paint: {
             "line-color": color,
             "line-opacity": [
-              'case',
-              ['boolean', ['feature-state', 'hover'], false],
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
               0.75,
-              0.5
-              ]
+              0.5,
+            ],
           },
           type: "line",
         },
@@ -130,11 +130,11 @@ const makeStyle = (features) => {
           paint: {
             "fill-color": color,
             "fill-opacity": [
-              'case',
-              ['boolean', ['feature-state', 'hover'], false],
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
               0.5,
-              0.2
-              ],
+              0.2,
+            ],
             "fill-outline-color": randomColor({ hue: color }),
           },
           type: "fill",
@@ -159,7 +159,8 @@ let features;
 const dropHandler = (e) => {
   e.preventDefault();
   const reader = new FileReader();
-
+  // 768
+  document.getElementById("info").style.width = "768px";
   reader.readAsArrayBuffer(e.dataTransfer.files[0]);
 
   reader.onload = () => {
@@ -167,7 +168,7 @@ const dropHandler = (e) => {
       const pbf = new Protobuf(reader.result);
 
       const tile = new VectorTile(pbf);
-      
+
       const zxy = window.prompt("Enter the tile z/x/y", document.cookie);
       document.cookie = zxy;
       const [z, x, y] = /(\d+)\/(\d+)\/(\d+)/
@@ -184,7 +185,7 @@ const dropHandler = (e) => {
           features: 0,
           coordinates: 0,
           extent: tile.layers[layer].extent,
-          kb: Math.round(tile.layers[layer].bytelength / 1000)
+          kb: Math.round(tile.layers[layer].bytelength / 1000),
         };
         const layerPropertyHasher = [];
         features = {
@@ -258,13 +259,7 @@ const dropHandler = (e) => {
           "td"
         );
         bodyRow.setAttribute("id", l);
-        // bodyRow.addEventListener("mouseenter", (e) => {
-        //   // ()
-        //   map.setFeatureState(
-        //     { source: e.target.id, id: 0},
-        //     { hover: true }
-        //     );
-        // })
+
         tableBody.appendChild(bodyRow);
       });
 
