@@ -1,5 +1,4 @@
 const maplibregl = require("maplibre-gl");
-// const VectorTile = require("@mapbox/vector-tile").VectorTile;
 const VectorTileLayer = require("@mapbox/vector-tile/lib/vectortilelayer")
 const Protobuf = require("pbf");
 const randomColor = require("randomcolor");
