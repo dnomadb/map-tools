@@ -159,7 +159,7 @@ let features;
 const dropHandler = (e) => {
   e.preventDefault();
   const reader = new FileReader();
-  // 768
+  
   document.getElementById("info").style.width = "768px";
   reader.readAsArrayBuffer(e.dataTransfer.files[0]);
 
