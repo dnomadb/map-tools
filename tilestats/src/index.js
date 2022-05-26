@@ -166,7 +166,7 @@ async function makeStyleFromTileJSON(url) {
     }
   };
   map.showTileBoundaries = true;
-
+  const unCheckTracker = {};
   const numberFormatter = (number) => {
     if (number > 10e6) {
       return "" + Math.round(number / 10000) / 100 + "m";
@@ -182,7 +182,10 @@ async function makeStyleFromTileJSON(url) {
     if (cellType === "td") {
       check = document.createElement("INPUT");
       check.setAttribute("type", "checkbox");
-      check.setAttribute("checked", "true");
+      if (!(data[0] in unCheckTracker)) {
+        check.setAttribute("checked", "true");
+      }
+
       check.setAttribute("id", data[0]);
       check.addEventListener("change", function () {
         const relatedLayers = style.layers.filter((l) => {
@@ -190,10 +193,12 @@ async function makeStyleFromTileJSON(url) {
         });
 
         if (this.checked) {
+          delete unCheckTracker[this.id];
           for (const layer of relatedLayers) {
             map.setLayoutProperty(layer.id, "visibility", "visible");
           }
         } else {
+          unCheckTracker[this.id] = true;
           for (const layer of relatedLayers) {
             map.setLayoutProperty(layer.id, "visibility", "none");
           }
