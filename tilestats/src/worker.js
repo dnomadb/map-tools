@@ -31,7 +31,7 @@ onmessage = function (e) {
         for (let layer in tile.layers) {
           const layerInfo = {
             features: [tile.layers[layer].length],
-            coordinates: [0],
+            coords: [0],
             kb: [tile.layers[layer].bytelength / 1000],
           };
           const layerPropertyHasher = [];
@@ -65,12 +65,12 @@ onmessage = function (e) {
 
             coordinates.forEach((chunk) => {
               chunk.forEach((part) => {
-                layerInfo.coordinates[0] += part.length;
+                layerInfo.coords[0] += part.length;
               });
             });
           }
           const unique = [...new Set(layerPropertyHasher)];
-          layerInfo.unique_properties = [unique.length];
+          layerInfo.u_attrs = [unique.length];
           tileInfo.layers[layer] = layerInfo;
         }
         postMessage(tileInfo);
