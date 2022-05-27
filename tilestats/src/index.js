@@ -143,6 +143,7 @@ async function makeStyleFromTileJSON(url) {
     transformRequest: (r, t) => {
       if (t == "Tile") {
         worker.postMessage(r);
+        return {url: r.replace("http://", "https://")}
       }
     },
     hash: true,
