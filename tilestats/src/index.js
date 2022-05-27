@@ -142,8 +142,9 @@ async function makeStyleFromTileJSON(url) {
     zoom: zoom, // starting zoom
     transformRequest: (r, t) => {
       if (t == "Tile") {
-        worker.postMessage(r);
-        return {url: r.replace("http://", "https://")}
+        const url = r.replace("http://", "https://");
+        worker.postMessage(url);
+        return {url: url}
       }
     },
     hash: true,
