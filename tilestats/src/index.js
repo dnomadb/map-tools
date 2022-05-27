@@ -1,6 +1,7 @@
 const maplibregl = require("maplibre-gl");
 const worker = new Worker(new URL("./worker.js", import.meta.url));
 const randomColor = require("randomcolor");
+
 const layerStats = {};
 const tileSizes = [];
 const average = (array) => array.reduce((a, b) => a + b) / array.length;
