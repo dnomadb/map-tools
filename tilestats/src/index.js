@@ -149,6 +149,9 @@ async function makeStyleFromTileJSON(url) {
     },
     hash: true,
   });
+  window.api = {
+    map: map
+  }
   const addClick = (layer) => {
     const paintMap = {
       fill: "fill-opacity",
@@ -208,7 +211,7 @@ async function makeStyleFromTileJSON(url) {
         }
       });
     } else {
-      check = document.createTextNode("visible");
+      check = document.createTextNode("👁");
     }
 
     const checkCell = document.createElement(cellType);
@@ -248,7 +251,14 @@ async function makeStyleFromTileJSON(url) {
       const bodyRow = createRow(
         [l].concat(
           header.slice(1, header.length).map((h) => {
-            return numberFormatter(average(r[h]));
+            if (h === "kb") {
+              const minval = Math.min(...r[h]);
+              const maxval = Math.max(...r[h]);
+              const avgval = average(r[h]);
+              return `${Math.round(minval * 10) / 10}/${Math.round(avgval * 10) / 10}/${Math.round(maxval * 10) / 10}`;
+            } else {
+              return numberFormatter(average(r[h]));
+            }
           })
         ),
         "td"

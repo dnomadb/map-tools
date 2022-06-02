@@ -32,7 +32,7 @@ onmessage = function (e) {
           const layerInfo = {
             features: [tile.layers[layer].length],
             coords: [0],
-            kb: [tile.layers[layer].bytelength / 1000],
+            "kb min/avg/max": [tile.layers[layer].bytelength / 1000],
           };
           const layerPropertyHasher = [];
           for (var f = 0; f < tile.layers[layer].length; f++) {
@@ -46,7 +46,7 @@ onmessage = function (e) {
 
             let geometry = tile.layers[layer]
               .feature(f)
-              .toGeoJSON(10, 10, 10).geometry;
+              .toGeoJSON(10, 10, 10).geometry; // zoom doesn't matter here, we just want to count the coords
             if (geometry["type"] === "Point") {
               coordinates = [[[geometry["coordinates"]]]];
             } else if (
