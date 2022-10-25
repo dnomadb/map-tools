@@ -37,7 +37,7 @@ async function queryData(x, y, z) {
     minY: s,
     maxY: n,
   };
-  let gj = geojson.deserialize("https://dnomadb.github.io/map-tools/workers/counties.fgb", rect);
+  let gj = geojson.deserialize("https://flatgeobuf.org/test/data/UScounties.fgb", rect);
   const features = {
     type: "FeatureCollection",
     features: [],
