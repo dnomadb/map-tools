@@ -1,6 +1,5 @@
 const maplibregl = require("maplibre-gl");
 const worker = new Worker(new URL("./worker.js", import.meta.url));
-const initWorker = new Worker(new URL("./worker.js", import.meta.url));
 const randomColor = require("randomcolor");
 
 const layerStats = {};
@@ -125,16 +124,6 @@ const makeStyleFromTileJSON = (tileJSON) => {
   }
 }
 
-async function iniTile(url) {
-  return new Promise((resolve, reject) => {
-    initWorker.postMessage(url);
-    initWorker.onmessage = (e) => {
-      return resolve(e);
-    }
-  });
-}
-
-
 (async () => {
   const query = new URLSearchParams(window.location.search);
   let tileJSONurl = query.get("tilejson");
@@ -145,13 +134,10 @@ async function iniTile(url) {
     query.set("tilejson", tileJSONurl);
     window.location.search = query.toString();
   } else if (tilesUrl) {
-    const url = tilesUrl.replace("{z}", "0").replace("{x}", "0").replace("{y}", "0");
-    const i = await iniTile(url);
     tileJSON = {
       "tilejson":"2.2.0","name":"states","version":"1.0.0","scheme":"xyz","tiles":[tilesUrl],"minzoom":0,"maxzoom":22,"bounds":[-180.0,-85.0,180.0,85.0],"center":[0.0,0.0,0],
-      "vector_layers": Object.keys(i.data.layers).map(i => {return {"id": i, "fields": []}})
+      "vector_layers": [{"id": "none", "fields": []}]
     }
-    console.log(tileJSON)
   }
   if (tileJSONurl) {
     const res = await fetch(tileJSONurl);
