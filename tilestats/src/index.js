@@ -1,5 +1,6 @@
 const maplibregl = require("maplibre-gl");
 const worker = new Worker(new URL("./worker.js", import.meta.url));
+const initWorker = new Worker(new URL("./worker.js", import.meta.url));
 const randomColor = require("randomcolor");
 
 const layerStats = {};
@@ -83,10 +84,8 @@ const makeSymbol = (layer_id, color, descProperty) => {
   };
 };
 
-async function makeStyleFromTileJSON(url) {
+const makeStyleFromTileJSON = (tileJSON) => {
   try {
-    const res = await fetch(url);
-    const tileJSON = await res.json();
     const styleLayers = tileJSON.vector_layers.reduce((all, layer, i) => {
       const fields = Object.keys(layer.fields).filter((f) => {
         return (
@@ -115,7 +114,7 @@ async function makeStyleFromTileJSON(url) {
         sources: {
           generated: {
             type: "vector",
-            url: url,
+            tiles: tileJSON.tiles
           },
         },
         layers: styleLayers,
@@ -126,15 +125,40 @@ async function makeStyleFromTileJSON(url) {
   }
 }
 
+async function iniTile(url) {
+  return new Promise((resolve, reject) => {
+    initWorker.postMessage(url);
+    initWorker.onmessage = (e) => {
+      return resolve(e);
+    }
+  });
+}
+
+
 (async () => {
   const query = new URLSearchParams(window.location.search);
   let tileJSONurl = query.get("tilejson");
-  if (!tileJSONurl) {
+  let tilesUrl = query.get("tiles");
+  let tileJSON;
+  if (!tileJSONurl && !tilesUrl) {
     tileJSONurl = window.prompt("Enter a tilejson url");
     query.set("tilejson", tileJSONurl);
     window.location.search = query.toString();
+  } else if (tilesUrl) {
+    const url = tilesUrl.replace("{z}", "0").replace("{x}", "0").replace("{y}", "0");
+    const i = await iniTile(url);
+    tileJSON = {
+      "tilejson":"2.2.0","name":"states","version":"1.0.0","scheme":"xyz","tiles":[tilesUrl],"minzoom":0,"maxzoom":22,"bounds":[-180.0,-85.0,180.0,85.0],"center":[0.0,0.0,0],
+      "vector_layers": Object.keys(i.data.layers).map(i => {return {"id": i, "fields": []}})
+    }
+    console.log(tileJSON)
   }
-  const [[lat, lng, zoom], style] = await makeStyleFromTileJSON(tileJSONurl);
+  if (tileJSONurl) {
+    const res = await fetch(tileJSONurl);
+    tileJSON = await res.json();
+    console.log(tileJSON)
+  }
+  const [[lat, lng, zoom], style] = makeStyleFromTileJSON(tileJSON);
   const map = new maplibregl.Map({
     container: "map",
     style: style,
@@ -229,6 +253,20 @@ async function makeStyleFromTileJSON(url) {
   };
   let tilesLoaded = 0;
   worker.onmessage = (e) => {
+    if (tilesUrl) {
+      let newLayer = false;
+      let flatLayers = tileJSON.vector_layers.map(l => {return l.id});
+      for (const layer of Object.keys(e.data.layers)) {
+        if (flatLayers.indexOf(layer) == -1) {
+          tileJSON.vector_layers.push({id: layer, fields: []});
+          newLayer = true
+        }
+      }
+      if (newLayer) {
+        const newStyle = makeStyleFromTileJSON(tileJSON);
+        map.setStyle(newStyle[1])
+      }
+    }
     tileSizes.push(e.data.size);
     tilesLoaded++;
     for (const [layer, stats] of Object.entries(e.data.layers)) {
