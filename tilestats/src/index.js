@@ -144,7 +144,7 @@ const makeStyleFromTileJSON = (tileJSON) => {
     tileJSON = await res.json();
     console.log(tileJSON)
   }
-  const [[lat, lng, zoom], style] = makeStyleFromTileJSON(tileJSON);
+  let [[lat, lng, zoom], style] = makeStyleFromTileJSON(tileJSON);
   const map = new maplibregl.Map({
     container: "map",
     style: style,
@@ -249,8 +249,8 @@ const makeStyleFromTileJSON = (tileJSON) => {
         }
       }
       if (newLayer) {
-        const newStyle = makeStyleFromTileJSON(tileJSON);
-        map.setStyle(newStyle[1])
+        [[lat, lng, zoom], style] = makeStyleFromTileJSON(tileJSON);
+        map.setStyle(style)
       }
     }
     tileSizes.push(e.data.size);
