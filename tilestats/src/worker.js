@@ -20,6 +20,15 @@ const tileHash = {};
 onmessage = function (e) {
   const tileInfo = { layers: {} };
   if (!(e.data in tileHash)) {
+    let tileCoords = /(\d+)\/(\d+)\/(\d+)\./.exec(e.data);
+
+    if (tileCoords.length) {
+      const [z, x, y] = tileCoords.slice(1, 4).map((c) => {
+        return parseInt(c);
+      });
+      tileCoords = [x, y, z];
+    }
+
     fetch(e.data)
       .then((response) => {
         return response.arrayBuffer();
@@ -72,6 +81,9 @@ onmessage = function (e) {
           const unique = [...new Set(layerPropertyHasher)];
           layerInfo.u_attrs = [unique.length];
           tileInfo.layers[layer] = layerInfo;
+        }
+        if (tileCoords.length) {
+          tileInfo.tile = tileCoords;
         }
         postMessage(tileInfo);
       });

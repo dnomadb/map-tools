@@ -1,6 +1,8 @@
 const maplibregl = require("maplibre-gl");
 const worker = new Worker(new URL("./worker.js", import.meta.url));
 const randomColor = require("randomcolor");
+const { tileToGeoJSON } = require("@mapbox/tilebelt");
+const bbox = require("@turf/bbox");
 
 const layerStats = {};
 const tileSizes = [];
@@ -97,6 +99,7 @@ const makeStyleFromTileJSON = (tileJSON) => {
       });
       const descProperty =
         [...new Set(fields)][0] || Object.keys(layer.fields)[0] || "";
+
       const color = randomColor({ luminosity: "bright", seed: i });
       all.push(makeFill(layer.id, color));
       all.splice(i, 0, makeCircle(layer.id, color));
@@ -113,7 +116,9 @@ const makeStyleFromTileJSON = (tileJSON) => {
         sources: {
           generated: {
             type: "vector",
-            tiles: tileJSON.tiles
+            tiles: tileJSON.tiles,
+            maxzoom: tileJSON.maxzoom,
+            minzoom: tileJSON.minzoom,
           },
         },
         layers: styleLayers,
@@ -122,7 +127,7 @@ const makeStyleFromTileJSON = (tileJSON) => {
   } catch (err) {
     console.error(err);
   }
-}
+};
 
 (async () => {
   const query = new URLSearchParams(window.location.search);
@@ -135,14 +140,22 @@ const makeStyleFromTileJSON = (tileJSON) => {
     window.location.search = query.toString();
   } else if (tilesUrl) {
     tileJSON = {
-      "tilejson":"2.2.0","name":"states","version":"1.0.0","scheme":"xyz","tiles":[tilesUrl],"minzoom":0,"maxzoom":22,"bounds":[-180.0,-85.0,180.0,85.0],"center":[0.0,0.0,0],
-      "vector_layers": [{"id": "none", "fields": []}]
-    }
+      tilejson: "2.2.0",
+      name: "states",
+      version: "1.0.0",
+      scheme: "xyz",
+      tiles: [tilesUrl],
+      minzoom: 0,
+      maxzoom: 22,
+      bounds: [-180.0, -85.0, 180.0, 85.0],
+      center: [0.0, 0.0, 0],
+      vector_layers: [{ id: "none", fields: [] }],
+    };
   }
   if (tileJSONurl) {
     const res = await fetch(tileJSONurl);
     tileJSON = await res.json();
-    console.log(tileJSON)
+    console.log(tileJSON);
   }
   let [[lat, lng, zoom], style] = makeStyleFromTileJSON(tileJSON);
   const map = new maplibregl.Map({
@@ -154,14 +167,67 @@ const makeStyleFromTileJSON = (tileJSON) => {
       if (t == "Tile") {
         const url = r.replace("http://", "https://");
         worker.postMessage(url);
-        return {url: url}
+        return { url: url };
       }
     },
     hash: true,
   });
+  const tileShapes = {
+    type: "FeatureCollection",
+    features: [],
+  };
+  const map2 = new maplibregl.Map({
+    container: "map2",
+    style: {
+      version: 8,
+      name: "Preview",
+      glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+      sources: {
+        tiles: {
+          type: "geojson",
+          data: tileShapes,
+        },
+        nations: {
+          type: "geojson",
+          data: "./world.geojson",
+        },
+      },
+      layers: [
+        {
+          id: "nations",
+          source: "nations",
+          type: "line",
+          paint: {
+            "line-color": "white",
+            "line-width": 0.25,
+          },
+        },
+        {
+          id: "shapes",
+          source: "tiles",
+          type: "fill",
+          paint: {
+            "fill-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "size"],
+              0,
+              "steelblue",
+              400,
+              "red",
+            ],
+            "fill-opacity": 0.15,
+          },
+        },
+      ],
+    },
+    center: [lng, lat], // starting position [lng, lat]
+    zoom: zoom, // starting zoom
+  });
   window.api = {
-    map: map
-  }
+    map: map,
+    map2: map2,
+  };
   const addClick = (layer) => {
     const paintMap = {
       fill: "fill-opacity",
@@ -181,6 +247,7 @@ const makeStyleFromTileJSON = (tileJSON) => {
       });
     }
   };
+
   map.showTileBoundaries = true;
   const unCheckTracker = {};
   const numberFormatter = (number) => {
@@ -238,21 +305,64 @@ const makeStyleFromTileJSON = (tileJSON) => {
     return row;
   };
   let tilesLoaded = 0;
+
+  // map.on("mousemove", (e) => {
+  //   const features = map.queryRenderedFeatures(e.point);
+  //   if (features.length) {
+  //     console.log(features[0].layer.id)
+  //     map.once("mouseleave", features[0].layer.id, (a) => {
+  //       console.log(a)
+  //     })
+  //   }
+  // });
+  class hoverChecker {
+    constructor(layerID, sourceId, sourceLayer) {
+      self.hovered = false;
+      this.hoverOver = this.hoverOver.bind(this);
+      map.on("mouseover", layerID, this.hoverOver);
+      this.sourceId = this.sourceId;
+    }
+    hoverOver(e) {
+      console.log(e.features[0]);
+    }
+  }
+  const hoverState = {};
   worker.onmessage = (e) => {
     if (tilesUrl) {
       let newLayer = false;
-      let flatLayers = tileJSON.vector_layers.map(l => {return l.id});
+      let flatLayers = tileJSON.vector_layers.map((l) => {
+        return l.id;
+      });
       for (const layer of Object.keys(e.data.layers)) {
         if (flatLayers.indexOf(layer) == -1) {
-          tileJSON.vector_layers.push({id: layer, fields: []});
-          newLayer = true
+          tileJSON.vector_layers.push({ id: layer, fields: [] });
+          newLayer = true;
         }
       }
       if (newLayer) {
         [[lat, lng, zoom], style] = makeStyleFromTileJSON(tileJSON);
-        map.setStyle(style)
+        style.layers.forEach((l) => {
+          if (!(l.id in hoverState)) {
+            hoverState[l.id] = new hoverChecker(
+              l.id,
+              l.source,
+              l["source-layer"]
+            );
+          }
+        });
+        map.setStyle(style);
       }
     }
+
+    tileShapes.features.push({
+      type: "Feature",
+      geometry: tileToGeoJSON(e.data.tile),
+      properties: {
+        size: e.data.size,
+      },
+    });
+    map2.getSource("tiles").setData(tileShapes);
+    map2.fitBounds(bbox.default(tileShapes));
     tileSizes.push(e.data.size);
     tilesLoaded++;
     for (const [layer, stats] of Object.entries(e.data.layers)) {
@@ -279,7 +389,9 @@ const makeStyleFromTileJSON = (tileJSON) => {
               const minval = Math.min(...r[h]);
               const maxval = Math.max(...r[h]);
               const avgval = average(r[h]);
-              return `${Math.round(minval * 10) / 10}/${Math.round(avgval * 10) / 10}/${Math.round(maxval * 10) / 10}`;
+              return `${Math.round(minval * 10) / 10}/${
+                Math.round(avgval * 10) / 10
+              }/${Math.round(maxval * 10) / 10}`;
             } else {
               return numberFormatter(average(r[h]));
             }
