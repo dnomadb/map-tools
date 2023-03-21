@@ -155,7 +155,6 @@ const makeStyleFromTileJSON = (tileJSON) => {
   if (tileJSONurl) {
     const res = await fetch(tileJSONurl);
     tileJSON = await res.json();
-    console.log(tileJSON);
   }
   let [[lat, lng, zoom], style] = makeStyleFromTileJSON(tileJSON);
   const map = new maplibregl.Map({
@@ -327,11 +326,14 @@ const makeStyleFromTileJSON = (tileJSON) => {
       this.sourceId = this.sourceId;
     }
     hoverOver(e) {
-      console.log(e.features[0]);
+      // console.log(e.features[0]);
     }
   }
   const hoverState = {};
+  const jsHeap = [];
   worker.onmessage = (e) => {
+    jsHeap.push(window.performance.memory.usedJSHeapSize);
+    // console.log()
     if (tilesUrl) {
       let newLayer = false;
       let flatLayers = tileJSON.vector_layers.map((l) => {
@@ -405,7 +407,7 @@ const makeStyleFromTileJSON = (tileJSON) => {
       );
       tableBody.appendChild(bodyRow);
     });
-
+    console.log(Math.max(...jsHeap))
     table.appendChild(tableBody);
     document.getElementById("info").innerHTML = "";
     const summary = document.createElement("span");

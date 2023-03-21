@@ -3,24 +3,9 @@ import tilebelt from "@mapbox/tilebelt";
 import geojsonvt from "geojson-vt";
 import vtpbf from "vt-pbf";
 
-const cacheName = "tiles";
-const cacheAssets = [];
-
-self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches
-      .open(cacheName)
-      .then((cache) => {
-        console.log(`${cacheName}`);
-        cache.addAll(cacheAssets);
-        // not sure if i needed this but..
-      })
-      .then(() => self.skipWaiting())
-  );
-});
 
 const zxyregex = new RegExp(
-  /https\:\/\/worker\-server\/(\d+)\/(\d+)\/(\d+)\.pbf/
+  /(\d+)\/(\d+)\/(\d+)\.pbf/
 );
 
 async function makeTile(tilearray) {
@@ -37,7 +22,7 @@ async function queryData(x, y, z) {
     minY: s,
     maxY: n,
   };
-  let gj = geojson.deserialize("data.fgb", rect);
+  let gj = geojson.deserialize("counties.fgb", rect);
   const features = {
     type: "FeatureCollection",
     features: [],
@@ -55,16 +40,16 @@ async function queryData(x, y, z) {
   return tile;
 }
 
-self.addEventListener("fetch", (ev) => {
-  const matches = zxyregex.exec(ev.request.url);
-  console.log(matches, ev.request.url);
+self.addEventListener('message', async ev => {
+  console.log(ev.data.id)
+
+  const matches = zxyregex.exec(ev.data.url);
   if (matches) {
     const [z, x, y] = matches.slice(1, 4).map((i) => {
       return parseInt(i);
     });
 
-    const res = queryData(x, y, z).then((data) => makeTile(data));
-
-    ev.respondWith(res);
+  const res = await queryData(x, y, z);
+    postMessage({tileData: res, id: ev.data.id});
   }
 });

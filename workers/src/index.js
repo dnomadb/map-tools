@@ -1,5 +1,5 @@
 const maplibregl = require("maplibre-gl");
-navigator.serviceWorker.register(new URL("./worker.js", import.meta.url));
+const worker = new Worker(new URL("./worker.js", import.meta.url));
 
 const map = new maplibregl.Map({
   container: "map",
@@ -9,11 +9,39 @@ const map = new maplibregl.Map({
   hash: true, // starting zoom
 });
 
+class TileWorkerManager {
+  constructor() {
+    this.calls = 0;
+    this.callbacks = {};
+    this.getTile = this.getTile.bind(this);
+  }
+
+  getTile(url, callback) {
+    worker.postMessage({
+      url: url,
+      id: this.calls
+    });
+    this.callbacks[this.calls++] = callback
+    worker.onmessage = (e) => {
+      const call = this.callbacks[e.data.id];
+      delete this.callbacks[e.data.id];
+      return call(null, e.data.tileData);
+    }
+  }
+}
+const TW = new TileWorkerManager();
+maplibregl.addProtocol("ranger", (params, callback) => {
+  console.log(params.url)
+  TW.getTile(params.url, (err, data) => {
+    return callback(null, data, null, null)
+  });
+  return { cancel: () => { } };
+});
+
 map.on("load", () => {
-  console.log("hi");
   map.addSource("counties", {
     type: "vector",
-    tiles: ["https://worker-server/{z}/{x}/{y}.pbf"],
+    tiles: ["ranger://worker-server/{z}/{x}/{y}.pbf"],
   });
   map.addLayer({
     id: "counties",
