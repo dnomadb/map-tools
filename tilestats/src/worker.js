@@ -20,7 +20,7 @@ const tileHash = {};
 onmessage = function (e) {
   const tileInfo = { layers: {} };
   if (!(e.data in tileHash)) {
-    let tileCoords = /(\d+)\/(\d+)\/(\d+)\./.exec(e.data);
+    let tileCoords = /(\d+)\/(\d+)\/(\d+)/.exec(e.data);
 
     if (tileCoords.length) {
       const [z, x, y] = tileCoords.slice(1, 4).map((c) => {
