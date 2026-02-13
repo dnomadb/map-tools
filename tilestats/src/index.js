@@ -156,6 +156,7 @@ const makeStyleFromTileJSON = (tileJSON) => {
     const res = await fetch(tileJSONurl);
     tileJSON = await res.json();
   }
+  window.tileJSON = tileJSON;
   let [[lat, lng, zoom], style] = makeStyleFromTileJSON(tileJSON);
   const map = new maplibregl.Map({
     container: "map",
